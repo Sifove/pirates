@@ -1,0 +1,151 @@
+from game import location
+import game.config as config
+import game.display as display
+from game.events import *
+from game.items import Item
+import random
+import numpy
+from game import event
+from game.combat import Monster
+import game.combat as combat
+from game.display import menu
+
+
+
+class BearIsland(location.Location):
+    
+    def __init__(self, x, y, w):
+        super().__init__(x, y, w)
+        self.name = "Bear Island"
+        self.symbol = 'M'
+        self.visitable = True
+
+        # sub-locations
+        self.locations = {}
+        self.locations["cove"] = HiddenCove(self)
+        self.locations["cliff"] = WhisperingCliff(self)
+        self.locations["ruins"] = AncientRuins(self)
+        self.locations["forest"] = EchoingForest(self)
+        self.locations["lagoon"] = CrystalLagoon(self)
+
+        self.starting_location = self.locations["cove"]
+
+    def enter(self, ship):
+        display.announce(
+            "You have arrived at the Mysterious Isle, shrouded in mist and filled with secrets.", pause=False
+        )
+
+class HiddenCove(location.SubLocation):
+    def __init__(self, m):
+        super().__init__(m)
+        self.name = "Hidden Cove"
+        self.verbs["north"] = self
+        self.event_chance = 20  # Chance for a random treasure or trap
+        self.events.append(treasure.TreasureChest())
+
+    def enter(self):
+        display.announce(
+            "You find yourself in a secluded cove. The waves lap gently against the shore. Scattered chests lie ahead."
+        )
+
+    def process_verb(self, verb, cmd_list, nouns):
+        if verb == "north":
+            config.the_player.next_loc = self.main_location.locations["cliff"]
+
+import random
+
+class WhisperingCliff(location.SubLocation):
+    def __init__(self, m):
+        super().__init__(m)
+        self.name = "Whispering Cliff"
+        self.verbs["south"] = self
+        self.puzzle_solved = False
+
+        # Define the pool of riddles and answers
+        self.riddles = {
+            "I am not alive, but I can grow. I do not have lungs, but I need air. I do not have a mouth, yet water kills me.": "fire",
+            "The more you take from me, the bigger I get. What am I?": "hole",
+            "I speak without a mouth and hear without ears. I have no body, but I come alive with the wind. What am I?": "echo"
+        }
+        # Select a random riddle for this playthrough
+        self.current_riddle, self.answer = random.choice(list(self.riddles.items()))
+
+    def enter(self):
+        if not self.puzzle_solved:
+            display.announce(
+                f"The cliff whispers riddles to you: {self.current_riddle}"
+            )
+        else:
+            display.announce("You stand at the top of the cliff, overlooking the island.")
+    def process_verb(self, verb, cmd_list, nouns):
+        if verb == "solve":
+            if self.solve_puzzle(cmd_list):  # Attempt to solve the riddle
+                self.puzzle_solved = True
+                display.announce("You decipher the riddle and climb the cliff safely.")
+            else:
+                display.announce("The riddle confuses you. You slip, losing progress.")
+        elif verb == "south":
+            config.the_player.next_loc = self.main_location.locations["cove"]
+
+    def solve_puzzle(self, cmd_list):
+        # Check if the player's command contains the correct answer
+        return self.answer in cmd_list
+    
+class AncientRuins(location.SubLocation):
+    def __init__(self, m):
+        super().__init__(m)
+        self.name = "Ancient Ruins"
+        self.verbs["west"] = self
+
+    def enter(self):
+        display.announce(
+            "You step into ancient ruins. A ghostly guardian appears, challenging your wisdom."
+        )
+        if self.challenge_player():
+            display.announce("The guardian vanishes, leaving a magical artifact.")
+        else:
+            display.announce("The guardian banishes you from the ruins.")
+
+    def challenge_player(self):
+        # Placeholder for a logic puzzle or mini-game
+        return True  # Simulate success for now
+
+    def process_verb(self, verb, cmd_list, nouns):
+        if verb == "west":
+            config.the_player.next_loc = self.main_location.locations["forest"]
+
+class EchoingForest(location.SubLocation):
+    def __init__(self, m):
+        super().__init__(m)
+        self.name = "Echoing Forest"
+        self.verbs["east"] = self
+
+    def enter(self):
+        display.announce(
+            "The forest echoes with strange noises. Mischievous spirits appear, offering a cryptic trade."
+        )
+
+    def process_verb(self, verb, cmd_list, nouns):
+        if verb == "trade":
+            display.announce("You trade with the spirits. The outcome is uncertain.")
+        elif verb == "east":
+            config.the_player.next_loc = self.main_location.locations["ruins"]
+
+class CrystalLagoon(location.SubLocation):
+    def __init__(self, m):
+        super().__init__(m)
+        self.name = "Crystal Lagoon"
+        self.verbs["north"] = self
+
+    def enter(self):
+        display.announce(
+            "You reach a serene lagoon filled with glowing crystals. Harvesting them feels tempting yet wrong."
+        )
+
+    def process_verb(self, verb, cmd_list, nouns):
+        if verb == "harvest":
+            display.announce(
+                "You collect the crystals, but the lagoon's light dims. Have you made the right choice?"
+            )
+        elif verb == "north":
+            config.the_player.next_loc = self.main_location.locations["forest"]

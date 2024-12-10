@@ -45,6 +45,14 @@ class World (context.Context):
                 if (self.locs[x][y].name == "ocean") and ((y in range(self.starty-2, self.starty+3)) or (x in range(self.startx-2, self.startx+3))):
                     self.locs[x][y] = cur_island (x, y, self)
                     placed = True
+        for TinyIsland in island_list:
+            placed = True
+            while placed == True
+
+
+
+
+
 
         #The pirates apparently got lost in a whirlpool
         whirl = whirlpool.Whirlpool (self.startx + 1, self.starty, self)
@@ -66,6 +74,7 @@ class World (context.Context):
         self.events.append (seagull.Seagull())
         self.events.append (sickness.Sickness())
         self.events.append (drowned_pirates.DrownedPirates())
+        self.events.append (Witch.witch())
         self.nouns["world"] = self
 
     def get_day (self):
@@ -118,13 +127,5 @@ class World (context.Context):
         return self.ship
 
 
-    def print (self):
-        ship_loc = self.ship.get_loc()
-        for i in range (0, World.worldsize):
-            for j in range (0, World.worldsize):
-                l = self.locs[i][j]
-                if (l == ship_loc):
-                    print ("S", end="")
-                else:
-                    print (self.locs[i][j].get_symbol(), end="")
-            print ()
+
+    
