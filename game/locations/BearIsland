@@ -9,15 +9,15 @@ from game import event
 from game.combat import Monster
 import game.combat as combat
 from game.display import menu
+from game.items import Treasure
 
 
 
 class BearIsland(location.Location):
-    
     def __init__(self, x, y, w):
         super().__init__(x, y, w)
         self.name = "Bear Island"
-        self.symbol = 'M'
+        self.symbol = 'B'
         self.visitable = True
 
         # sub-locations
@@ -32,7 +32,7 @@ class BearIsland(location.Location):
 
     def enter(self, ship):
         display.announce(
-            "You have arrived at the Mysterious Isle, shrouded in mist and filled with secrets.", pause=False
+            "You have arrived at the Bear Island, shrouded in mist and filled with secrets.", pause=False
         )
 
 class HiddenCove(location.SubLocation):
@@ -41,8 +41,7 @@ class HiddenCove(location.SubLocation):
         self.name = "Hidden Cove"
         self.verbs["north"] = self
         self.event_chance = 20  # Chance for a random treasure or trap
-        self.events.append(treasure.TreasureChest())
-
+        self.events.append(Treasure())
     def enter(self):
         display.announce(
             "You find yourself in a secluded cove. The waves lap gently against the shore. Scattered chests lie ahead."
@@ -51,8 +50,6 @@ class HiddenCove(location.SubLocation):
     def process_verb(self, verb, cmd_list, nouns):
         if verb == "north":
             config.the_player.next_loc = self.main_location.locations["cliff"]
-
-import random
 
 class WhisperingCliff(location.SubLocation):
     def __init__(self, m):
@@ -77,6 +74,7 @@ class WhisperingCliff(location.SubLocation):
             )
         else:
             display.announce("You stand at the top of the cliff, overlooking the island.")
+
     def process_verb(self, verb, cmd_list, nouns):
         if verb == "solve":
             if self.solve_puzzle(cmd_list):  # Attempt to solve the riddle
@@ -90,7 +88,7 @@ class WhisperingCliff(location.SubLocation):
     def solve_puzzle(self, cmd_list):
         # Check if the player's command contains the correct answer
         return self.answer in cmd_list
-    
+
 class AncientRuins(location.SubLocation):
     def __init__(self, m):
         super().__init__(m)
@@ -118,18 +116,31 @@ class EchoingForest(location.SubLocation):
     def __init__(self, m):
         super().__init__(m)
         self.name = "Echoing Forest"
-        self.verbs["east"] = self
+        self.verbs["north"] = self
+        self.verbs["south"] = self
 
-    def enter(self):
-        display.announce(
-            "The forest echoes with strange noises. Mischievous spirits appear, offering a cryptic trade."
+        # Add treasure directly here
+        self.treasure = Treasure(
+            name="Ancient Gold Coin",
+            description="A shiny, old gold coin with intricate engravings.",
+            value=100  # Value for scoring purposes
         )
 
+    def enter(self):
+        if "Treasure Compass" in config.the_player.items:
+            display.announce(
+                "With the help of your Treasure Compass, you find a previously hidden trail leading deeper into the forest."
+            )
+        else:
+            display.announce(
+                "You stand in the Echoing Forest. The wind whispers through the trees, and strange sounds echo in the distance."
+            )
+
     def process_verb(self, verb, cmd_list, nouns):
-        if verb == "trade":
-            display.announce("You trade with the spirits. The outcome is uncertain.")
-        elif verb == "east":
-            config.the_player.next_loc = self.main_location.locations["ruins"]
+        if verb == "north":
+            config.the_player.next_loc = self.main_location.locations["whisperingCliff"]
+        elif verb == "south":
+            config.the_player.next_loc = self.main_location.locations["lagoon"]
 
 class CrystalLagoon(location.SubLocation):
     def __init__(self, m):
@@ -149,3 +160,85 @@ class CrystalLagoon(location.SubLocation):
             )
         elif verb == "north":
             config.the_player.next_loc = self.main_location.locations["forest"]
+
+class LostExplorer(location.SubLocation):
+    def __init__(self, m):
+        super().__init__(m)
+        self.name = "Lost Explorer"
+        self.verbs["north"] = self
+        self.verbs["south"] = self
+        self.verbs["talk"] = self
+        self.verbs["help"] = self
+        self.explorer_helped = False
+
+    def enter(self):
+        if not self.explorer_helped:
+            display.announce(
+                "You find a lost explorer lying near a tree, seemingly injured. They look up at you with hope."
+                "\n'Can you help me find my way back to the camp?'"
+            )
+        else:
+            display.announce("The explorer smiles and thanks you for helping. They're now safely back at camp.")
+
+    def process_verb(self, verb, cmd_list, nouns):
+        if verb == "talk":
+            self.talk_to_explorer()
+        elif verb == "help":
+            self.help_explorer()
+        elif verb == "south":
+            config.the_player.next_loc = self.main_location.locations["lagoon"]
+
+    def talk_to_explorer(self):
+        if not self.explorer_helped:
+            display.announce(
+                "'I was on an expedition and got lost. I heard rumors of treasure hidden on this island, but I can't find my way back.'"
+            )
+        else:
+            display.announce("'Thank you again for helping me! I'll never forget your kindness.'")
+
+    def help_explorer(self):
+        if not self.explorer_helped:
+            display.announce("You guide the explorer safely back to their camp. They offer you a reward in gratitude.")
+            self.explorer_helped = True
+            self.player_rewards()
+        else:
+            display.announce("The explorer no longer needs help, but they thank you again.")
+
+    def player_rewards(self):
+        # Reward the player with an item or other benefit
+        display.announce("The explorer hands you a strange compass as a token of gratitude.")
+        new_item = TreasureCompass()
+        config.the_player.add_item(new_item)
+        display.announce(f"You have received: {new_item.name}")
+
+# Define the Treasure class
+class Treasure:
+    def __init__(self, name, description, value):
+        self.name = name
+        self.description = description
+        self.value = value
+
+    def use(self):
+        
+        display.announce(f"You use the {self.name}. It seems to have a special effect.")
+
+class TreasureCompass:
+    def __init__(self):
+        self.name = "Treasure Compass"
+        self.description = "A mysterious compass that points towards hidden treasure locations."
+        self.use_effect = "Use it to find hidden treasure locations on the island."
+
+    def use(self):
+        
+        display.announce("The compass begins to glow faintly, indicating a hidden treasure nearby.")
+        
+
+# Fixing treasure compass use
+def use_compass(self):
+    # Loop through potential treasure locations on the island
+    for location in self.main_location.locations.values():
+        if hasattr(location, "treasure") and location.treasure:
+            display.announce(f"The compass points towards {location.name}, where treasure is hidden.")
+            break
+    else:
+        display.announce("The compass doesn't seem to detect any nearby treasure.")

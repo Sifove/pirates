@@ -85,3 +85,9 @@ class Flintlock(Item):
         self.skill = "guns"
         self.verb = "shoot"
         self.verb2 = "shoots"
+
+class Treasure(Item):
+    def __init__(self):
+        self.name = "Treasure Chest"
+        self.description = "A chest filled with treasure!"
+        # Add other properties and methods
